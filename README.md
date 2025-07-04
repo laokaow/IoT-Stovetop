@@ -29,7 +29,7 @@ It is also perfect for the classic "Did I really turn the stove off?" when you j
 |Temperature sensor DS18B20|Collecting temperature|41015731|
 |Active Piezo Speaker|To make a sound and alert people|41015713|
 
-Additionally microUSB to USB-A cable. Male-Male cables, Male-Female cables are also needed.
+Additionally microUSB to USB-A cable, Male-Male cables, Male-Female cables are also needed.
 
 I chose the Raspberry Pi Pico WH because of it's versatility, price and ease of use. It is a microcontroller (mcu), which in this project is programmed in micropython. WH indicates that it is presoldered - which for someone who doesnt own soldering equipment is a huge bonus. Its layout is readily available online and the m
 ###### Picture of the pico
@@ -89,36 +89,55 @@ Now the programming environment should be up and running. The next step is to up
 5. In the terminal write a simple print("Hello World")
 6. If everything is up and running you should be welcomed to Micropython with its version number, the name of your mcu and the text you just typed in
 
-This should cover everything you need to start, as long as you use windows and have this specific version of Raspberry Pi Pico W
+This should cover everything you need to start, as long as you use windows and have this specific version of Raspberry Pi Pico W.
+
+Now for writing code and loading it to your Pico you simply insert the Pico to your PC, open PyMakr, press the connect button, and then press start development mode. This makes it very easy to just write code, press ctrl+s and it automatically uploads it and runs on your Pico.
+
+Using smart names for your .py files is recommended to easier work with the code.
 
 
 ### Putting everything together
 
+Here I will update with the circuits
+
 ### Platform
-The hosting platform used is Adafruit IO. This service makes it easy to get your project quickly up and running. It makes data transfer, visualization of data, and controlling units very easy. It can easily integrate with Discord via webhooks to send you notifications or live updates. You can even interact with your device.
+The hosting platform used is Adafruit IO. Firstly it's free, at least for a small project like this. This service makes it easy to get your project quickly up and running as it supports data transfer, visualization of data, and controlling units and is very intuitive. It can easily integrate with Discord via webhooks to send you notifications or live updates. You can even interact with your IoT-device - For example making a button in your dashboard to turn on or off a light.
 
 
 
-For further development on this project I would very much like to design my own database and frontend. There are plenty of alternative ways of doing this. For lightweight projects SQLite could be used and for more advanced projects 
+For further development on this project I would very much like to design my own database and frontend. There are plenty of alternative ways of doing this. For lightweight projects SQLite could be used and for more advanced projects PostgreSQL. For the frontend either a mobile app which sends alerts or alarm sounds when dangerous levels are detected.
+
 ### The Code
 
+Here I will update with code snippets once finalized
+
 ### Data and Connectivity
-To connect with wifi it is important to separate sensitive data from main code that you push publicly.
+I chose to connect my mcu with wifi as my gadget will just be inside my house and my router is closeby and very stable.
+
+When connecting with wifi it is important to separate sensitive data from main code that you push publicly.
 To do this you can create variables such as
   WIFI_SSID = 'Your_SSID'
   WIFI_PASS = 'Your_Password'
-Then you can reference these variables in your main code without risking others connecting to your wifi.
+Then you can reference these variables in your main code without risking others connecting to your wifi. Of course replacing with the actual values. Then you add it to .gitignore so you don't accidentally push it publicly.
+
+
 
 ### Data Presentation
 Adafruit IO is used to visualize the data.
+Creating a dashboard is quite straight forward
+- You create feeds, name them and choose which type of feed
+- Place them on your dashboard
+- Then you get a key which you can write in your code for sending the data between your mcu and adafruit through wifi
+- 
 
-#This is to be updated a bit more
 For my project I both wanted a temperature graph (to see whether the temperature is rising or getting lower).
 I also wanted a simple box that shows the current temperature.
 I also want a box thats shows, in minutes or seconds, the last time movement was detected.
 
 ### Final Design
 All in all I am happy with my project.
+
+
 **What to change?**
 
 Getting a stronger and more consumer grade temperature sensor. For this project some DIY and taping needed to be done, and the reliability isnt 100%.
