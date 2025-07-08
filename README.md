@@ -1,17 +1,20 @@
 # IoT-Stovetop
 
+
+---
+
 This is my project report for the summer course Applied IoT 1DT305 @ Linnaeus University.
 
-A "smart" warning system which tracks temperature above the stovetop. In conjunction with a motion detector the system knows whether the stove/oven is on and no one is there using it.
-
-Author: Edwin Bylander
+A "smart" warning system which tracks temperature above the stovetop. In conjunction with a motion detector the system knows whether the stove/oven is on and if no one is there using it.
+ 
+Author: Edwin Bylander  
 Student Credentials: ed225bu
 
-Estimated time: 
-Putting hardware together: 2 hours. Note: this is without trimming cables, soldering etc
-Writing the code: I put around 20-30 hours (including wifi connection, mqtt etc)
-Adafruit and MQTT (Setting up feeds, dashboards): Under 1 hour
-Fixing the Back/Frontend: ---
+### Estimated time:  
+Putting hardware together: 2 hours. Note: this is without trimming cables, soldering etc  
+Writing the code: I put around 20-30 hours (including wifi connection, mqtt etc)  
+Adafruit and MQTT (Setting up feeds, dashboards): Under 1 hour  
+Fixing the Back/Frontend:  
 
 
 ### Objective
@@ -36,10 +39,10 @@ It is also perfect for the classic "Did I really turn the stove off?" when you j
 
 
 
-Additionally microUSB to USB-A cable, Male-Male cables, Male-Female cables are also needed.
+Additionally microUSB to USB-A cable, Male-Male cables, Male-Female cables are also needed.  
 3x Resistors at 0.25 W 330 ohm each was used for the leds. Product Code at Electrokit: 40810233
 
-I chose the Raspberry Pi Pico WH because of it's versatility, price and ease of use. It is a microcontroller (mcu), which in this project is programmed in micropython. WH indicates that it is presoldered - which for someone who doesnt own soldering equipment is a huge bonus. Its layout is readily available online and the m
+I chose the Raspberry Pi Pico WH because of it's versatility, price and ease of use. It is a microcontroller (mcu), which in this project is programmed in micropython. WH indicates that it is presoldered - which for someone who doesnt own soldering equipment is a huge bonus. Its layout is readily available online and also in my repository.
 ###### Picture of the pico
 ![image](https://github.com/user-attachments/assets/1419cce2-51e1-4fd8-94a7-0718a2ece3e9)
 
@@ -105,15 +108,13 @@ This should cover everything you need to start, as long as you use windows and h
 
 Now for writing code and loading it to your Pico you simply insert the Pico to your PC, open PyMakr, press the connect button, and then press start development mode. This makes it very easy to just write code, press ctrl+s and it automatically uploads it and runs on your Pico.
 
-Using smart names for your .py files is recommended to easier work with the code.
-
 
 ### Putting everything together
 
 Here I will update with the circuits
 
 ### Platform
-The hosting platform used for this project is Adafruit IO which is cloud based. It offers MQTT-based data management and visualization for IoT-devices.
+The hosting platform used for this project is Adafruit IO which is cloud based. It offers MQTT-based data management and visualization for IoT-devices.  
 Currently the free tier is used. That means its history and feed storage is limited.
 
 For a larger, more sophisticated project you could either go for something like Google Cloud IoT which offers large storage and more advanced analytics. Or depending on the product designing a database from scratch and creating your own frontend.
@@ -138,67 +139,244 @@ Code Structure
 | `wifiConnection.py`| Functions for connecting to wifi|
 |`mqtt_client.py`    |Functions for connecting to mqtt and Adafruit|
 
+You can fin the full code [here](https://github.com/laokaow/IoT-Stovetop/tree/main/LNU_Project)  
+Some help code for connecting to mqtt and wifi.  
+[MQTT Code](https://github.com/iot-lnu/pico-w/blob/main/network-examples/N2_WiFi_MQTT_Webhook_Adafruit/lib/wifiConnection.py)  
+[Wifi Code](https://github.com/iot-lnu/pico-w/blob/main/network-examples/N2_WiFi_MQTT_Webhook_Adafruit/lib/wifiConnection.py)  
 
-Some help code for connecting to mqtt and wifi.
-[MQTT Code](https://github.com/iot-lnu/pico-w/blob/main/network-examples/N2_WiFi_MQTT_Webhook_Adafruit/lib/wifiConnection.py)
-[Wifi Code](https://github.com/iot-lnu/pico-w/blob/main/network-examples/N2_WiFi_MQTT_Webhook_Adafruit/lib/wifiConnection.py)
+###### High Level explanation with some pseudocode
+- boot.py initializes the wifi connection when the system gets power
+- before main loop the device connects to mqtt
+- if system not on then red LED blinks slowly and the wait_for_start() function waits for button press AND updates status to STANDBY - no data is sent
+- hold the button 2+ seconds to set system on
+- if system on then green LED ALWAYS on AND data sends continually to Adafruit AND status is set ONLINE
+- if temperature over a certain threshold and no movement for a certain amount of time then alarm blaring AND dashboard shows a red circle AND red LED blinking
+- if button press under 2 seconds then override disables the alarm and puts the system on hold for 30 minutes or until button pressed again under 2 seconds AND updates status to OVERRIDE
+- when override active then yellow LED and green LED are active
+- if system on then hold the button 2 seconds - Goes back to the beginning of the wait_for_start() - wifi+mqtt still active
 
-###### Connecting to wifi
+###### Start function
 <pre markdown="1">
-  import wifiConnection
+def wait_for_start():
+    print("System OFF. Waiting for button hold to start System.")
+    if mqtt_connected:
+        mqtt_client.publish(TOPIC_STATUS, "STANDBY") # Waiting after this for button press
+    while True:
+        button_pressed = sensors.read_button()
+        update_leds(time.time(), False, False, False, button_pressed) # Sets the correct LED
+        if button_pressed:
+            press_start = time.time()
+            while sensors.read_button():
+                time.sleep(0.1)
+            if time.time() - press_start >= PRESS_THRESHOLD:
+                print("System ON")
+                mqtt_client.publish(TOPIC_STATUS, "ONLINE")
+                return  # Back to the main loop
+        time.sleep(0.1)
+  </pre>
 
+###### Controlling internet and mqtt connection
+<pre markdown="1">
+  def check_and_reconnect():
+    global mqtt_connected
+    if not w.is_connected():
+        print("WiFi lost. Reconnecting...")
+        try:
+            w.connect_wifi()
+            print("WiFi reconnected.")
+        except Exception as e:
+            print("WiFi reconnection failed:", e)
 
-def http_get(url = 'http://detectportal.firefox.com/'):
-    import socket                           # Used by HTML get request
-    import time                             # Used for delay
-    _, _, host, path = url.split('/', 3)    # Separate URL request
-    addr = socket.getaddrinfo(host, 80)[0][-1]  # Get IP address of host
-    s = socket.socket()                     # Initialise the socket
-    s.connect(addr)                         # Try connecting to host address
-    # Send HTTP request to the host with specific path
-    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))    
-    time.sleep(1)                           # Sleep for a second
-    rec_bytes = s.recv(10000)               # Receve response
-    print(rec_bytes)                        # Print the response
-    s.close()                               # Close connection
-
-#First thing that should run
-print("Booting Stovetop Monitoring Device")
-
-# Connecting to wifi when giving the system power
-try:
-    ip = wifiConnection.connect_wifi()
-except KeyboardInterrupt:
-    print("Keyboard interrupt")
-
-# Gets information about the network connection
-try:
-    http_get()
-except (Exception, KeyboardInterrupt) as err:
-    print("No Internet", err)
+    if not mqtt_connected:
+        print("MQTT lost. Reconnecting...")
+        connect_mqtt()
 </pre>
-
+###### Example function. Buzzer and Alarm topics logic lives together
 <pre markdown="1">
-  
+def activate_alarm():
+    global alarm_active
+    a.buzzer.on()
+    mqtt_client.publish(TOPIC_ALARM, "1")
+    alarm_active = True
+    print("Alarm ON")
+</pre>
+###### LED logic
+<pre markdown="1">
+def update_leds(now, system_on, override_active, alarm_active, button_pressed):
+    update_green_led(system_on)
+    update_yellow_led(now, override_active, button_pressed)
+    update_red_led(now, alarm_active, system_on)
+
+# Green led always on when system is on
+def update_green_led(system_on):
+    if system_on:
+        a.green_on()
+    else:
+        a.green_off()
+
+def update_yellow_led(now, override_active, button_pressed):
+    global yellow_led_on, last_yellow_blink_time
+    if button_pressed:
+        # Yellow led blinking quickly when button pressed
+        if now - last_yellow_blink_time >= 0.05:
+            yellow_led_on = not yellow_led_on
+            if yellow_led_on:
+                a.yellow_on()
+            else:
+                a.yellow_off()
+            last_yellow_blink_time = now
+    else:
+        # Yellow led on during override
+        if override_active:
+            a.yellow_on()
+            yellow_led_on = True
+        else:
+            a.yellow_off()
+            yellow_led_on = False
+
+def update_red_led(now, alarm_active, system_on):
+    global red_led_on, last_red_blink_time
+    if alarm_active:
+        # Red blinking quickly when alarm active
+        if now - last_red_blink_time >= 0.5:
+            red_led_on = not red_led_on
+            if red_led_on:
+                a.red_on()
+            else:
+                a.red_off()
+            last_red_blink_time = now
+    elif not system_on:
+          if red_led_on:
+            if now - last_red_blink_time >= 0.1: #Slow blink when in standby mode
+                a.red_off()
+                red_led_on = False
+          else:
+            if now - last_red_blink_time >= 9.8:
+                a.red_on()
+                red_led_on = True
+                last_red_blink_time = now
+    else:
+        a.red_off()
+        red_led_on = False
+</pre>
+###### Main loop with explanations
+<pre markdown="1">
+  while True: # Main Loop which executes the main functions
+    now = time.time()
+
+    if not system_on:
+        wait_for_start() #Waiting until button press
+        system_on = True
+        check_and_reconnect()
+        override_active = False
+        reset_measurements() 
+        deactivate_alarm()
+        time.sleep(0.1)
+
+    else:
+        check_and_reconnect()
+        button_pressed = sensors.read_button()
+        update_leds(now, system_on, override_active, alarm_active, button_pressed) #Checks which LED logic to follow
+
+        if button_pressed:
+            press_start = now
+            while sensors.read_button():
+                time.sleep(0.01) # Enables it to sense button holds for 10 ms
+            press_duration = time.time() - press_start # Separation between time.time() and now might be important. It works like this at least
+
+            if press_duration >= PRESS_THRESHOLD: # Turns the System off
+                system_on = False
+                override_active = False
+                deactivate_alarm()
+                mqtt_client.publish(TOPIC_STATUS, "STANDBY")
+                print("System OFF. Standby mode.")
+                continue
+            else:
+                override_active = not override_active # Switches between override from ON to OFF and vice versa. Toggle Logic
+                if override_active: # If not override active this if statement turns on and starts the override
+                    override_end_time = now + MANUAL_OVERRIDE_DURATION
+                    mqtt_client.publish(TOPIC_STATUS, "OVERRIDE")
+                    deactivate_alarm()
+                    print("Manual override started and alarm stopped. System back to normal in 30 minutes or when button is pressed again.")
+                else:
+                    print("Manual override stopped.")
+                    motion_last_detected = now # Simple solution codewise to make a reasonable pause for the alarm
+                    check_and_reconnect()
+                    mqtt_client.publish(TOPIC_STATUS, "ONLINE")
+        if override_active and now >= override_end_time: # If the override time runs out
+            override_active = False
+            print("Manual overrides 30 minute timer ended.")
+            check_and_reconnect()
+            mqtt_client.publish(TOPIC_STATUS, "ONLINE")
+
+        # Iteration which senses temperatures, sends to Adafruit and prints in terminal
+        if now - last_temp_sent >= TEMP_SEND_INTERVAL:
+            current_temp = sensors.read_temperature() 
+            if current_temp is not None:
+                mqtt_client.publish(TOPIC_TEMP_CURRENT, str(current_temp))
+                mqtt_client.publish(TOPIC_TEMP_GRAPH, str(current_temp))
+                print(f"Current temperature: {current_temp:.2f} degrees Celsius")
+            last_temp_sent = now
+        # Iteration which senses when motion is detected, sends to Adafruit and prints in terminal
+        if now - last_motion_sent >= NO_MOTION_SEND_INTERVAL:
+            motion = sensors.detect_motion()
+            if motion:
+                motion_last_detected = now
+                mqtt_client.publish(TOPIC_MOTION, "Just Now")
+                print("Movement Detected!")
+                last_no_motion_sent = now
+            last_motion_sent = now
+        # Iteration that calculates how long since motion was detected, sends to Adafruit and prints in terminal
+        seconds_since_motion = int(now - motion_last_detected)
+        if seconds_since_motion >= 60 and now - last_no_motion_sent > NO_MOTION_SEND_INTERVAL:
+            minutes = seconds_since_motion // 60
+            mqtt_client.publish(TOPIC_MOTION, f"{minutes} min ago")
+            print(f"No Movement for {minutes} minutes")
+            last_no_motion_sent = now
+
+        # Variable for less code repetition
+        alarm_should_be_on = (system_on and not override_active and 
+                              current_temp is not None and current_temp > TEMP_THRESHOLD and
+                              (now - motion_last_detected) > NO_MOTION_THRESHOLD)
+
+        if alarm_should_be_on and not alarm_active:
+           activate_alarm()
+        elif not alarm_should_be_on and alarm_active:
+           deactivate_alarm()
+
+        mqtt_client.check_msg() #Not yet subscribing to a topic
+        time.sleep(0.2)
 </pre>
 
 
 
 
 ### Data and Connectivity
-I chose to connect my mcu with wifi as my gadget will just be inside my house and my router is closeby and very stable.
+I chose to connect my mcu with wifi as my IoT device will just be inside my house and my router is closeby and very stable.
 
-When connecting with wifi it is important to separate sensitive data from main code that you push publicly.
-To do this you can create variables such as
-  WIFI_SSID = 'Your_SSID'
-  WIFI_PASS = 'Your_Password'
+When connecting with wifi it is important to separate sensitive data from main code that you push publicly.  
+To do this you can create variables such as:  
+  WIFI_SSID = 'Your_SSID'  
+  WIFI_PASS = 'Your_Password'  
 Then you can reference these variables in your main code without risking others connecting to your wifi. Of course replacing with the actual values. Then you add it to .gitignore so you don't accidentally push it publicly.
 
-The same holds true for your Adafruit credentials
-ADAFRUIT_IO_USERNAME = "username"
-ADAFRUIT_IO_KEY = "key"
+The same holds true for your Adafruit credentials  
+ADAFRUIT_IO_USERNAME = "username"  
+ADAFRUIT_IO_KEY = "key"  
 
+Temperature Data is sent every 15 seconds. This might be too often for a free tier service, but I enjoy having a lot of data.
+Motion Data is sent every minute
+- If no detected movement it increments 1 minute each time it sends
+- If movement detected it resets the motion counter to zero and presents "Just Now" in the dashboard
+System Status Data is sent every time the system status changes - which shouldn't be too often for an active in use system. When testing it sends whenever you turn the system on/off or when you override
+Alarm Status is sent everytime the alarm is on and when it turns off
 
+All this Data is sent using the mqtt_client method publish(). Each of these datapoints have their own defined topics and values which are sent at the above explained times and intervals.
+
+In the program several checks are performed, and also try methods, to ensure that the program always has a connection to both wifi and mqtt.  
+As I commented in the code this is security critical for a real system which has critical use cases.
+
+Here is an example of 
 
 
 ### Data Presentation
