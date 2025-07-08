@@ -7,18 +7,19 @@ A "smart" warning system which tracks temperature above the stovetop. In conjunc
 Author: Edwin Bylander
 Student Credentials: ed225bu
 
-Estimated time to replicate:
-Putting hardware together: 2 hours (if everything is unpacked, structured and you know how to do it)
-Writing the code: 
-Fixing the Back/Frontend:
+Estimated time: 
+Putting hardware together: 2 hours. Note: this is without trimming cables, soldering etc
+Writing the code: I put around 20-30 hours (including wifi connection, mqtt etc)
+Adafruit and MQTT (Setting up feeds, dashboards): Under 1 hour
+Fixing the Back/Frontend: ---
 
 
 ### Objective
 This stovetop monitor serves as warning system for a stovetop. It tracks temperature above the stovetop - in my case the stove and oven are combined in one unit and they emit heat upwards.
 
-It is perfect if you have small rascals (toddlers) running around whom might accidentally (or on purpose, but unkowing of the potential consequences) turn on any or all of the dials for the stovetop. The buzzer will then serve its purpose and warn you if no movement has been detected for an appropiate amount of time.
+It is perfect if you have small rascals (toddlers) running around whom might accidentally (or on purpose, but unkowing of the potential consequences) turn on any or all of the dials for the stovetop. The buzzer will then serve its purpose and warn you if no movement has been detected for an appropiate amount of time(5 minutes in my case).
 
-It is also perfect for the classic "Did I really turn the stove off?" when you just locked the door, or arrived somewhere. Perhaps someone accidentally turned a dial on after you checked, or you simply just forgot. Then you can check in the app/website for the temperature and feel a sense of calm.
+It is also perfect for the classic "Did I really turn the stove off?" when you just locked the door, or arrived somewhere. Perhaps someone accidentally turned a dial on after you last checked, or you simply just forgot. Then you can check in the app/website for the temperature and feel a sense of calm.
 
 ### Material
 | IoT-Thing | Purpose  | Product Code|
@@ -28,8 +29,15 @@ It is also perfect for the classic "Did I really turn the stove off?" when you j
 |PIR motion detector HC-SR501 |Detecting movement|41015509|
 |Temperature sensor DS18B20|Collecting temperature|41015731|
 |Active Piezo Speaker|To make a sound and alert people|41015713|
+|Push Button Momentan|To be able to press a button|41015723|
+|Red LED|For red light|40307020|
+|Yellow LED|For yellow light|40307021|
+|Green LED|For green light|40307023|
+
+
 
 Additionally microUSB to USB-A cable, Male-Male cables, Male-Female cables are also needed.
+3x Resistors at 0.25 W 330 ohm each was used for the leds. Product Code at Electrokit: 40810233
 
 I chose the Raspberry Pi Pico WH because of it's versatility, price and ease of use. It is a microcontroller (mcu), which in this project is programmed in micropython. WH indicates that it is presoldered - which for someone who doesnt own soldering equipment is a huge bonus. Its layout is readily available online and the m
 ###### Picture of the pico
@@ -54,7 +62,11 @@ The PIR motion detector works by detecting temperature + movement together. Plac
 ###### Picture of the motion sensor
 ![image](https://github.com/user-attachments/assets/870e65c9-24a8-4dfb-aad3-59ffae71f688)
 
+The Push Button Momentan seemed simple enough. When pushed down output is low and when not pushed down the output is high
+###### Picture of the push button
+![image](https://github.com/user-attachments/assets/87f7ac1f-9497-46bd-be3b-78d82f8e3681)
 
+LEDs for different lights. The green one could have been stronger. The same ohm was used for each respective LEDs resistor. I will omit the picture.
 
 The materials were sourced solely from electrokit.com.
 A Start Kit containing the mcu, breadboard, cables etc which was bought for SEK 279.20.
@@ -101,15 +113,77 @@ Using smart names for your .py files is recommended to easier work with the code
 Here I will update with the circuits
 
 ### Platform
-The hosting platform used is Adafruit IO. Firstly it's free, at least for a small project like this. This service makes it easy to get your project quickly up and running as it supports data transfer, visualization of data, and controlling units and is very intuitive. It can easily integrate with Discord via webhooks to send you notifications or live updates. You can even interact with your IoT-device - For example making a button in your dashboard to turn on or off a light.
+The hosting platform used for this project is Adafruit IO which is cloud based. It offers MQTT-based data management and visualization for IoT-devices.
+Currently the free tier is used. That means its history and feed storage is limited.
 
+For a larger, more sophisticated project you could either go for something like Google Cloud IoT which offers large storage and more advanced analytics. Or depending on the product designing a database from scratch and creating your own frontend.
 
+However for a smaller project like this, or a quick prototype, it is very good. The feeds were up and running quickly, the data was clear and it was easy to customize for your need.
 
-For further development on this project I would very much like to design my own database and frontend. There are plenty of alternative ways of doing this. For lightweight projects SQLite could be used and for more advanced projects PostgreSQL. For the frontend either a mobile app which sends alerts or alarm sounds when dangerous levels are detected.
+You can also easily integrate with Discord via webhooks to send you notifications or live updates. You can even interact with your IoT-device throgh Actions - For example making a button in your dashboard turn on or off a light.
+
 
 ### The Code
 
-Here I will update with code snippets once finalized
+Code Structure
+| File               | Description               |
+|--------------------|---------------------------|
+| `main.py`          | Main program entry point  |
+| `boot.py`          | Runs when program gets power|
+| `config.py`        | Configuration settings    |
+| `keys.py`          | Variables for Wifi        |
+| `sensors.py`       | Declaring the Sensors     |
+| `actuators.py`     | Declaring the Actuators   |
+|`status_leds.py`    | LED logic                 |
+| `wifiConnection.py`| Functions for connecting to wifi|
+|`mqtt_client.py`    |Functions for connecting to mqtt and Adafruit|
+
+
+Some help code for connecting to mqtt and wifi.
+[MQTT Code](https://github.com/iot-lnu/pico-w/blob/main/network-examples/N2_WiFi_MQTT_Webhook_Adafruit/lib/wifiConnection.py)
+[Wifi Code](https://github.com/iot-lnu/pico-w/blob/main/network-examples/N2_WiFi_MQTT_Webhook_Adafruit/lib/wifiConnection.py)
+
+###### Connecting to wifi
+<pre markdown="1">
+  import wifiConnection
+
+
+def http_get(url = 'http://detectportal.firefox.com/'):
+    import socket                           # Used by HTML get request
+    import time                             # Used for delay
+    _, _, host, path = url.split('/', 3)    # Separate URL request
+    addr = socket.getaddrinfo(host, 80)[0][-1]  # Get IP address of host
+    s = socket.socket()                     # Initialise the socket
+    s.connect(addr)                         # Try connecting to host address
+    # Send HTTP request to the host with specific path
+    s.send(bytes('GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))    
+    time.sleep(1)                           # Sleep for a second
+    rec_bytes = s.recv(10000)               # Receve response
+    print(rec_bytes)                        # Print the response
+    s.close()                               # Close connection
+
+#First thing that should run
+print("Booting Stovetop Monitoring Device")
+
+# Connecting to wifi when giving the system power
+try:
+    ip = wifiConnection.connect_wifi()
+except KeyboardInterrupt:
+    print("Keyboard interrupt")
+
+# Gets information about the network connection
+try:
+    http_get()
+except (Exception, KeyboardInterrupt) as err:
+    print("No Internet", err)
+</pre>
+
+<pre markdown="1">
+  
+</pre>
+
+
+
 
 ### Data and Connectivity
 I chose to connect my mcu with wifi as my gadget will just be inside my house and my router is closeby and very stable.
@@ -120,19 +194,32 @@ To do this you can create variables such as
   WIFI_PASS = 'Your_Password'
 Then you can reference these variables in your main code without risking others connecting to your wifi. Of course replacing with the actual values. Then you add it to .gitignore so you don't accidentally push it publicly.
 
+The same holds true for your Adafruit credentials
+ADAFRUIT_IO_USERNAME = "username"
+ADAFRUIT_IO_KEY = "key"
+
+
 
 
 ### Data Presentation
 Adafruit IO is used to visualize the data.
 Creating a dashboard is quite straight forward
-- You create feeds, name them and choose which type of feed
-- Place them on your dashboard
-- Then you get a key which you can write in your code for sending the data between your mcu and adafruit through wifi
-- 
+- You create feeds, name them and give them a description. Then you can choose between a URL, API URL or mqtt key.
+- Then to create the dashboard you place feeds and match them with a suiting icon which displays different types of data.
+- After this is done you can send data from your IoT device directly to Adafruit. In my case I used mqtt.
+- Below in the code section you can see some examples of this.
 
 For my project I both wanted a temperature graph (to see whether the temperature is rising or getting lower).
-I also wanted a simple box that shows the current temperature.
-I also want a box thats shows, in minutes or seconds, the last time movement was detected.
+There is a simple box that shows the current temperature.
+A box thats shows, in minutes the last time movement was detected. It also shows if movement was recently detected also.
+A circle which is red when the alarm(buzzer) is blaring. It is green when the alarm is off.
+There is also a status bar that displays which mode the system currently is in (ONLINE, OFFLINE, STANDBY, OVERRIDE)
+
+As in this project I use the free version of Adafruit. They store 1kb of data when history is turned on. 1
+
+###### Picture of the dashboard
+
+
 
 ### Final Design
 All in all I am happy with my project.
