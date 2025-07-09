@@ -1,20 +1,18 @@
 # IoT-Stovetop
 
-
+A "smart" warning system which tracks temperature above the stovetop. In conjunction with a motion detector the system knows whether the stove/oven is on and if no one is there using it. Connected to wifi and sending messages with the mqtt protocol to be able to monitor remotely
 ---
 
 This is my project report for the summer course Applied IoT 1DT305 @ Linnaeus University.
-
-A "smart" warning system which tracks temperature above the stovetop. In conjunction with a motion detector the system knows whether the stove/oven is on and if no one is there using it.
  
 Author: Edwin Bylander  
 Student Credentials: ed225bu
 
 ### Estimated time:  
-Putting hardware together: 2 hours. Note: this is without trimming cables, soldering etc  
+Putting hardware together(Following the diagram): 1-3 hours. Note: this is without trimming cables, soldering etc  
 Writing the code: I put around 20-30 hours (including wifi connection, mqtt etc)  
-Adafruit and MQTT (Setting up feeds, dashboards): Under 1 hour  
-Fixing the Back/Frontend:  
+Adafruit and MQTT (Setting up feeds, dashboards): 1-2 hours  
+Fixing the Back/Frontend: Entirely dependent on the level of the system and the developer 
 
 
 ### Objective
@@ -23,6 +21,8 @@ This stovetop monitor serves as warning system for a stovetop. It tracks tempera
 It is perfect if you have small rascals (toddlers) running around whom might accidentally (or on purpose, but unkowing of the potential consequences) turn on any or all of the dials for the stovetop. The buzzer will then serve its purpose and warn you if no movement has been detected for an appropiate amount of time(5 minutes in my case).
 
 It is also perfect for the classic "Did I really turn the stove off?" when you just locked the door, or arrived somewhere. Perhaps someone accidentally turned a dial on after you last checked, or you simply just forgot. Then you can check in the app/website for the temperature and feel a sense of calm.
+
+This project teaches how to use a microcontroller, connect sensors and actuators, write code, connect with wifi and communicate using the mqtt protocol. It's quite encompassing.
 
 ### Material
 | IoT-Thing | Purpose  | Product Code|
@@ -38,11 +38,11 @@ It is also perfect for the classic "Did I really turn the stove off?" when you j
 |Green LED|For green light|40307023|
 
 
-
 Additionally microUSB to USB-A cable, Male-Male cables, Male-Female cables are also needed.  
 3x Resistors at 0.25 W 330 ohm each was used for the leds. Product Code at Electrokit: 40810233
 
 I chose the Raspberry Pi Pico WH because of it's versatility, price and ease of use. It is a microcontroller (mcu), which in this project is programmed in micropython. WH indicates that it is presoldered - which for someone who doesnt own soldering equipment is a huge bonus. Its layout is readily available online and also in my repository.
+
 ###### Picture of the pico
 ![image](https://github.com/user-attachments/assets/1419cce2-51e1-4fd8-94a7-0718a2ece3e9)
 
@@ -106,12 +106,25 @@ Now the programming environment should be up and running. The next step is to up
 
 This should cover everything you need to start, as long as you use windows and have this specific version of Raspberry Pi Pico W.
 
-Now for writing code and loading it to your Pico you simply insert the Pico to your PC, open PyMakr, press the connect button, and then press start development mode. This makes it very easy to just write code, press ctrl+s and it automatically uploads it and runs on your Pico.
+Now for writing code and loading it to your Pico you simply insert the Pico to your PC, open PyMakr, press the connect button, and then press start development mode. This makes it very easy to just write code, press ctrl+s and it automatically uploads it and runs on your Pico. 
+
+Note: It can be a bit finicky at times. But disconnecting and unplugging your device, then plug in and connect again usually does the trick!
 
 
 ### Putting everything together
 
-Here I will update with the circuits
+Below is the wiring of this project.
+- Black cables represent ground (gnd).
+- Red cables represent power 3v3
+- Orange, yellow, cyan represent the connection between the GPIO pins on the mcu and the components Signal (S) DQ pins
+
+The components are not a perfect match to their real life counterparts. But some simple deduction will help differentiate between the DS18B20 temperature sensor, PIR motion detector, Active Piezo Buzzer and the Press Button.
+
+The LEDs coudln't (or I didn't figure out how to) rotate. The long legs are next to the GPIO-Pins. They use the same 330 ohm resistors. This can, and probably should be changed to manually control their light output.  
+Note: The components used for the real IoT Device already has built-in resistors. Hence they are not represented.
+
+![Electrical Wiring](https://github.com/user-attachments/assets/88360df7-9c4e-4b78-8583-1a0cad7a23ff)
+
 
 ### Platform
 The hosting platform used for this project is Adafruit IO which is cloud based. It offers MQTT-based data management and visualization for IoT-devices.  
@@ -156,7 +169,7 @@ Some help code for connecting to mqtt and wifi.
 - if system on then hold the button 2 seconds - Goes back to the beginning of the wait_for_start() - wifi+mqtt still active
 
 ###### Start function
-<pre markdown="1">
+```python
 def wait_for_start():
     print("System OFF. Waiting for button hold to start System.")
     if mqtt_connected:
@@ -173,11 +186,11 @@ def wait_for_start():
                 mqtt_client.publish(TOPIC_STATUS, "ONLINE")
                 return  # Back to the main loop
         time.sleep(0.1)
-  </pre>
+  ```
 
 ###### Controlling internet and mqtt connection.  
 ###### Function used throughout the code to make sure wifi and mqtt are connected
-<pre markdown="1">
+```python
   def check_and_reconnect():
     global mqtt_connected
     if not w.is_connected():
@@ -191,18 +204,18 @@ def wait_for_start():
     if not mqtt_connected:
         print("MQTT lost. Reconnecting...")
         connect_mqtt()
-</pre>
+```
 ###### Example function. The mqtt alarm topic and physical buzzer logic lives together
-<pre markdown="1">
+```python
 def activate_alarm():
     global alarm_active
     a.buzzer.on()
     mqtt_client.publish(TOPIC_ALARM, "1")
     alarm_active = True
     print("Alarm ON")
-</pre>
+```
 ###### LED logic
-<pre markdown="1">
+```python
 def update_leds(now, system_on, override_active, alarm_active, button_pressed):
     update_green_led(system_on)
     update_yellow_led(now, override_active, button_pressed)
@@ -259,9 +272,9 @@ def update_red_led(now, alarm_active, system_on):
     else:
         a.red_off()
         red_led_on = False
-</pre>
+```
 ###### Main loop with explanations
-<pre markdown="1">
+```python
   while True: # Main Loop which executes the main functions
     now = time.time()
 
@@ -347,7 +360,7 @@ def update_red_led(now, alarm_active, system_on):
 
         mqtt_client.check_msg() #Not yet subscribing to a topic
         time.sleep(0.2)
-</pre>
+```
 
 
 
@@ -377,8 +390,11 @@ All this Data is sent using the mqtt_client method publish(). Each of these data
 In the program several checks are performed, and also try methods, to ensure that the program always has a connection to both wifi and mqtt.  
 As I commented in the code this is security critical for a real system which has critical use cases.
 
-Here is an example of 
-
+Here is an example of how mqtt messages are sent.  
+```python TOPIC_TEMP_CURRENT = f"{config.ADAFRUIT_IO_USERNAME}/feeds/{config.AIO_FEED_CURRENTTEMP}" ```
+ADAFRUIT_IO_USERNAME and AIO_FEED_CURRENTTEMP are both hidden constants in another file. Writing the code this way makes it more secure.  
+This sends the data to the currect URL for that specific feed.
+```python mqtt_client.publish(TOPIC_TEMP_CURRENT, str(current_temp))```
 I even implemented the kill switch method for mqtt. However at this point in time it doesn't work. The goal is for the dashboard to show OFFLINE when the power is off or when something unexpected happens to the supply or wifi.  
 
 
@@ -406,6 +422,13 @@ The possibilities are endless!
 My system serves as a warning system however and do not need this level of sophistication just yet. It would definitely be the next step in my Stovetop Monitors evolution however.
 
 ###### Picture of the dashboard
+![Active measurements](https://github.com/user-attachments/assets/58cf02a3-8b2c-4376-a564-901f43b727c7)
+
+![Override mode](https://github.com/user-attachments/assets/7042bd4d-0e9b-444e-899e-51a5e7b03f99)
+
+![Standby Mode](https://github.com/user-attachments/assets/8cf1235d-cb25-4866-a4ef-c79cf1cfec8f)
+
+![Movement Detected](https://github.com/user-attachments/assets/cf534827-d813-46a8-bda3-f2194be6b9fc)
 
 
 
@@ -414,8 +437,9 @@ All in all I am happy with my project.
 
 **What to change?**
 
-Getting a stronger and more consumer grade temperature sensor. Trimming the cables.
-Creating my own frontend and backend for more freedom when visualizing the data.
+- Getting a stronger and more consumer grade temperature sensor. Trimming the cables.
+- Creating my own frontend and backend for more freedom when visualizing the data.
+- Have more color coded dupont cables. Easier when one color means one thing. Red = power for example.
 
 **Extras to buy**
 
@@ -425,7 +449,7 @@ Soldering equipment, cutters, good tape etc. To easier shorten cables and make p
 Pictures:
 
 ### Final thoughts
-This project, and in extension course, has been very interesting. It bridges the gap between software and hardware and it teaches you how everything is connected.
+This project, and in extension course, has been very interesting. It bridges the gap between software and hardware and it teaches you how everything is connected.  
 One revelation I had was how "simple" many common household items can be. Take for example a smoke detector/fire alarm. Before this course I couldn't tell you how it really worked and if I were to just start building one I wouldnt even know where to start. To illustrate my point, I will do a high level list of what is needed, just from the top of my head.
 - MCU. The brain controlling the device
 - Wires and cables to connect everything
