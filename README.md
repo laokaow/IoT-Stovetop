@@ -188,8 +188,7 @@ def wait_for_start():
         time.sleep(0.1)
   ```
 
-###### Controlling internet and mqtt connection.  
-###### Function used throughout the code to make sure wifi and mqtt are connected
+###### Controlling internet and mqtt connection - Function used throughout the code to make sure wifi and mqtt are connected
 ```python
   def check_and_reconnect():
     global mqtt_connected
@@ -433,20 +432,21 @@ My system serves as a warning system however and do not need this level of sophi
 
 
 ### Final Design
-All in all I am happy with my project.
+All in all I am happy with my project.![IoT-Device](https://github.com/user-attachments/assets/63613c56-0e75-44bf-bfcb-59573516a9e2)
+![IoT-Device](https://github.com/user-attachments/assets/86ced9b4-c9f8-4cde-bc34-e4b21b92838d)
+
 
 **What to change?**
 
-- Getting a stronger and more consumer grade temperature sensor. Trimming the cables.
+- Getting a stronger and more consumer grade temperature sensor. Trimming the cables. Then it can be mounted
 - Creating my own frontend and backend for more freedom when visualizing the data.
 - Have more color coded dupont cables. Easier when one color means one thing. Red = power for example.
 
 **Extras to buy**
 
-A 3D printer. To make my own case would be really awesome. While it is cool to see all the wires and components connected, it would be even cooler to have it all encased and hanging on the wall. It would then maybe look like a consumer grade item.
+A 3D printer. To make my own case would be really awesome. While it is cool to see all the wires and components connected, it would be even cooler to have it all encased and hanging on the wall. It would then maybe look like a consumer grade item.  
 Soldering equipment, cutters, good tape etc. To easier shorten cables and make pins stick better. It makes it much more reliable and customizable.
 
-Pictures:
 
 ### Final thoughts
 This project, and in extension course, has been very interesting. It bridges the gap between software and hardware and it teaches you how everything is connected.  
