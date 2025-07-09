@@ -175,7 +175,8 @@ def wait_for_start():
         time.sleep(0.1)
   </pre>
 
-###### Controlling internet and mqtt connection
+###### Controlling internet and mqtt connection.  
+###### Function used throughout the code to make sure wifi and mqtt are connected
 <pre markdown="1">
   def check_and_reconnect():
     global mqtt_connected
@@ -191,7 +192,7 @@ def wait_for_start():
         print("MQTT lost. Reconnecting...")
         connect_mqtt()
 </pre>
-###### Example function. Buzzer and Alarm topics logic lives together
+###### Example function. The mqtt alarm topic and physical buzzer logic lives together
 <pre markdown="1">
 def activate_alarm():
     global alarm_active
@@ -364,11 +365,11 @@ The same holds true for your Adafruit credentials
 ADAFRUIT_IO_USERNAME = "username"  
 ADAFRUIT_IO_KEY = "key"  
 
-Temperature Data is sent every 15 seconds. This might be too often for a free tier service, but I enjoy having a lot of data.
+Temperature Data is sent every 15 seconds. This might be too often for a free tier service, but I enjoy having a lot of data.  
 Motion Data is sent every minute
 - If no detected movement it increments 1 minute each time it sends
 - If movement detected it resets the motion counter to zero and presents "Just Now" in the dashboard
-System Status Data is sent every time the system status changes - which shouldn't be too often for an active in use system. When testing it sends whenever you turn the system on/off or when you override
+System Status Data is sent every time the system status changes - which shouldn't be too often for an active in use system. When testing it sends whenever you turn the system on/off or when you override  
 Alarm Status is sent everytime the alarm is on and when it turns off
 
 All this Data is sent using the mqtt_client method publish(). Each of these datapoints have their own defined topics and values which are sent at the above explained times and intervals.
@@ -377,6 +378,8 @@ In the program several checks are performed, and also try methods, to ensure tha
 As I commented in the code this is security critical for a real system which has critical use cases.
 
 Here is an example of 
+
+I even implemented the kill switch method for mqtt. However at this point in time it doesn't work. The goal is for the dashboard to show OFFLINE when the power is off or when something unexpected happens to the supply or wifi.  
 
 
 ### Data Presentation
@@ -393,7 +396,14 @@ A box thats shows, in minutes the last time movement was detected. It also shows
 A circle which is red when the alarm(buzzer) is blaring. It is green when the alarm is off.
 There is also a status bar that displays which mode the system currently is in (ONLINE, OFFLINE, STANDBY, OVERRIDE)
 
-As in this project I use the free version of Adafruit. They store 1kb of data when history is turned on. 1
+As in this project I use the free version of Adafruit. They store 1kb of data when history is turned on. Hence the only database used is Adafruits storage. As my IoT Devices main purpose is a warning system for the home kitchen the need for structured and long term data is not needed.  
+If this device were to have more sophisticated sensors, like for example high precision and high limit temperature sensors for each cooking plate and for the oven. Then you could store really interesting cooking data.  
+- Individual cooking data for each plate
+- Each plates efficiency (warm up time and cool down time)
+- Combined with measuring which heat setting, 1-6, see max temperature of each setting etc.
+- Also a more precise (more precise code) motion detector could see how many times the kitchen is entered, how long time is spent there etc.
+The possibilities are endless!
+My system serves as a warning system however and do not need this level of sophistication just yet. It would definitely be the next step in my Stovetop Monitors evolution however.
 
 ###### Picture of the dashboard
 
@@ -402,10 +412,9 @@ As in this project I use the free version of Adafruit. They store 1kb of data wh
 ### Final Design
 All in all I am happy with my project.
 
-
 **What to change?**
 
-Getting a stronger and more consumer grade temperature sensor. For this project some DIY and taping needed to be done, and the reliability isnt 100%.
+Getting a stronger and more consumer grade temperature sensor. Trimming the cables.
 Creating my own frontend and backend for more freedom when visualizing the data.
 
 **Extras to buy**
